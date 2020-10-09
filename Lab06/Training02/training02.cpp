@@ -29,9 +29,8 @@ int main() {
 
 	Animal catDog = dog + cat; //개냥이 합성
 	catDog.showName();
-
 	dog.showName();
-
+	
 	getchar();
 	return 0;
 }
