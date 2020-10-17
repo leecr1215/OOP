@@ -10,6 +10,7 @@ public:
 	std::string getAnyString() {
 		return "Stored String :: " + anyString;
 	}
+	//함수 선언
 	friend std::ostream& operator<<(std::ostream& os,  AnyString& a);
 };
 
@@ -24,6 +25,7 @@ int main() {
 	return 0;
 }
 
+//함수 구현
 std::ostream& operator<<(std::ostream& os,  AnyString& a)
 {
 	os << a.getAnyString();
