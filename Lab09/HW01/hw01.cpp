@@ -12,11 +12,14 @@ public:
 	//Unary operator
 	int operator++(int) { //postfix operation (indicated by dummy 'int')
 	  //작성1
-		return number++;
+		MyData data = *this;
+		++* this;
+		return data;
 	}
 	int operator++() { //prefix operation
 	  //작성2
-		return ++number;
+		++number;
+		return *this;
 	}
 
 	friend std::ostream& operator<<(std::ostream&, MyData&);
@@ -38,5 +41,4 @@ int main() {
 	std::cout << mydata++ << std::endl; // 1
 	std::cout << ++mydata << std::endl; // 3
 	std::cout << mydata;
-
 }
