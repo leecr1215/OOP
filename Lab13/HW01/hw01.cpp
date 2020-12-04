@@ -16,11 +16,7 @@ void bubble_sort(ForwardIterator first, ForwardIterator last, Compare comp) {
 	}
 }
 //Fuctor인 compGreater를 구현하세요. (힌트: 1. 두 정수 비교 결과를 bool 타입을 리턴한다. 2. operator() 를 구현한다. 3. Fuctor는 클래스 형태와 비슷하다.)
-/*
-bool compGreater(int a, int b) {
-	return a > b;
-};
-*/
+
 struct compGreater {
 	bool operator()(int a, int b) const{
 		return a > b;
