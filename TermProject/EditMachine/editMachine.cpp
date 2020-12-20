@@ -87,6 +87,10 @@ public:
 			page++;	// 페이지 다시 원상복구
 			throw string("첫번째 페이지 입니다.");
 		}
+		if (cmdInput.length() > 1) {
+			page++;
+			throw string("존재하지 않는 명령어입니다.");
+		}
 		printPage(vec);
 	}
 };
@@ -98,7 +102,10 @@ public:
 
 	virtual void run(vector<string>& vec, string cmdInput) {
 		page++;
-
+		if (cmdInput.length() > 1) {
+			page--;
+			throw string("존재하지 않는 명령어입니다.");
+		}
 		printPage(vec);
 	}
 };
@@ -141,7 +148,7 @@ public:
 		}
 
 		// 처음 숫자 부분 1~20인지 확인
-		if (stoi(x[0]) < 1 && stoi(x[0]) > 20) {
+		if (stoi(x[0]) < 1 || stoi(x[0]) > 20) {
 			throw string("첫 번째 인자는 1~20 사이의 값만 입력할 수 있습니다.");
 		}
 
@@ -214,6 +221,11 @@ public:
 		vector<string> x;
 		x.clear();
 		while (getline(ss, stringBuffer, ',')) {	// , 에 도달하기 전까지의 값이 stringBuffer에 저장.
+			for (int i = 0; i < stringBuffer.length(); i++) {
+				if (stringBuffer[i] == ' ') {
+					throw string("공백이 존재합니다. 다시 입력해주세요.");
+				}
+			}
 			x.push_back(stringBuffer);
 		}
 
@@ -296,6 +308,11 @@ class ChangeText : public TextStrategy {
 		vector<string> x;
 		x.clear();
 		while (getline(ss, stringBuffer, ',')) {	// , 에 도달하기 전까지의 값이 stringBuffer에 저장.
+			for (int i = 0; i < stringBuffer.length(); i++) {
+				if (stringBuffer[i] == ' ') {
+					throw string("공백이 존재합니다. 다시 입력해주세요.");
+				}
+			}
 			x.push_back(stringBuffer);
 		}
 
@@ -308,6 +325,7 @@ class ChangeText : public TextStrategy {
 		if (x[1].length() > 75) {
 			throw string("문자열 길이가 75바이트를 넘었습니다. 다시 입력해주세요.");
 		}
+
 
 		string target = x[0];
 		string changeData = x[1];
@@ -346,6 +364,12 @@ public:
 		// 인자 75바이트 넘는지 확인
 		if (substring.length() > 75) {
 			throw string("문자열 길이가 75바이트를 넘었습니다. 다시 입력해주세요.");
+		}
+
+		for (int i = 0; i < substring.length(); i++) {
+			if (substring[i] == ' ') {
+				throw string("공백이 존재합니다. 다시 입력해주세요.");
+			}
 		}
 
 		string target = substring;
