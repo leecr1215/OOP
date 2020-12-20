@@ -3,57 +3,103 @@
 #include <vector>
 #include <string>
 #include <locale>
+#include <sstream>
 using namespace std;
+
+static int page = 0;
+
 
 class TextStrategy {
 public:
-	virtual void run(){};
-	virtual void run(vector<string>& vec, int pageNum){};
-	
-};
+	virtual void run(vector<string>& vec, string cmdInput) = 0;	//printpage
+	void printPage(vector<string>&vec) {
+		cout << "---------------------------------------------------------------------------" << endl;
 
-class PrintPage : public TextStrategy {
-	// 다음 페이지 출력
-	// pageNum = 다음 페이지의 번호
-public:
-	
-	void run(vector<string>& vec, int pageNum) {
-		int index = 1;
-		int len = 3;
-
-
-		cout << " " << index << "|";
+		int index = 1;	// 현재 라인 길이
+		string line = "";
 
 		// 벡터 출력해보기
-		for (int i = 0; i < vec.size(); i++) {
-			len = len + 1 + vec[i].size();
-
-			if (len <= 75 && 20*pageNum <= index) {
-
-				cout << " " << vec[i];
-
-			}
-			else if(20 * pageNum <= index && len > 75){
-
-				len = 3;
-				index++;
-				cout << "\n";
-				if ((index/pageNum) < 21) {
-					if ((index/pageNum) < 10) {
-						cout << " " << index << "|";
+		for (int i = 0; i < vec.size(); i++)
+		{
+			if (4 + line.size() + vec[i].size() > 75) {	// 다음줄 출력
+				if (page * 20 < index && index <= (page + 1) * 20)
+				{
+					if (index < 10) {
+						cout << " " << index << "|" << line << "\n";
 					}
 					else {
-						cout << index << "|";
+						cout << index << "|" << line << "\n";
 					}
+
 				}
-				else {
-					
-					break;
+				index++;
+				line = "";
+				line += " " + vec[i];	// vec[i]는 다음 라인에 위치하게됨
+			}
+			else {	// line에 글자 더하기
+				line += " " + vec[i];
+			}
+		}
+	}
+};
+
+class StartPrint : public TextStrategy {	// 처음 editor에 넣을 클래스.
+public:
+	virtual void run(vector<string>& vec, string cmdInput) {
+		int index = 1;	// 현재 라인 길이
+		int len = 4;
+		string line = "";
+
+		// 벡터 출력해보기
+		for (int i = 0; i < vec.size(); i++)
+		{
+			if (4 + line.size() + vec[i].size() > 75) {	// 다음줄 출력
+				if (page * 20 < index && index <= (page + 1) * 20)
+				{
+					if (index < 10) {
+						cout << " " << index << "|" << line << "\n";
+					}
+					else {
+						cout << index << "|" << line << "\n";
+					}
+
 				}
-				i--;
+				index++;
+				line = "";
+				line += " " + vec[i];	// vec[i]는 다음 라인에 위치하게됨
+			}
+			else {	// line에 글자 더하기
+				line += " " + vec[i];
 			}
 		}
 
+	}
+};
+
+class PrevPage : public TextStrategy {	// p 입력
+	// 페이지 출력
+	
+public:
+
+	virtual void run(vector<string>& vec, string cmdInput) {
+		page--;
+		if (page < 0) {
+			page++;	// 페이지 다시 원상복구
+			throw string("첫번째 페이지 입니다.");
+		}
+		printPage(vec);
+	}
+};
+
+class NextPage : public TextStrategy {	// n 입력
+	// 페이지 출력
+
+public:
+
+	virtual void run(vector<string>& vec, string cmdInput) {
+		page++;
+
+		printPage(vec);
 	}
 };
 
@@ -62,8 +108,92 @@ class InsertText : public TextStrategy {
 	// i(1,10,hello)
 	// 첫 번째 라인의 열 번째 단어 뒤에 hello 넣기
 public:
-	void run(vector<string>& vec, int pageNum, int line, int prevIndex, string target) {
+	virtual void run(vector<string>& vec, string cmdInput) {
 
+		// () 아니면
+		if (cmdInput[1] != '(' || cmdInput[cmdInput.length() - 1]!= ')') {
+			throw string("괄호가 존재하지 않습니다. 다시 입력해주세요.");
+		}
+		//i과 ()제거
+		string substring = cmdInput.substr(2, cmdInput.length()-3); 
+		istringstream ss(substring);
+		string stringBuffer;
+		vector<string> x;
+		x.clear();
+		while (getline(ss, stringBuffer, ',')) {	// , 에 도달하기 전까지의 값이 stringBuffer에 저장.
+			
+			for (int i = 0; i < stringBuffer.length(); i++) {
+				if (stringBuffer[i] == ' ') {
+					throw string("공백이 존재합니다. 다시 입력해주세요.");
+				}
+			}
+			x.push_back(stringBuffer);
+		}
+
+		// 인자 3개인지 확인
+		if (x.size() != 3) {
+			throw string("인자의 개수가 잘못됐습니다. 다시 입력해주세요.");
+		}
+
+		// 숫자 숫자인지 확인
+		if (!atoi(x[0].c_str()) || !atoi(x[1].c_str())) {
+			throw string("숫자 숫자 문자여야합니다. 다시 입력해주세요.");
+		}
+
+		// 처음 숫자 부분 1~20인지 확인
+		if (stoi(x[0]) < 1 && stoi(x[0]) > 20) {
+			throw string("첫 번째 인자는 1~20 사이의 값만 입력할 수 있습니다.");
+		}
+
+		// 문자부분 75바이트 초과인지 확인
+		if (x[2].length() > 75) {
+			throw string("문자열 길이가 75바이트를 넘었습니다. 다시 입력해주세요.");
+		}
+
+		int line = stoi(x[0]);
+		int prevIndex = stoi(x[1]);
+		string target = x[2];
+
+
+		int len = 4;
+		int index = 1;
+		
+		for (int i = 0; i < vec.size(); i++) {
+			if (index == line) {	// 해당 라인이면
+				int first = i;
+				int last=i;
+				int lineLen = 4;
+				for (int j = i; j < vec.size(); j++) {
+					lineLen += 1 + vec[j].size();
+					if (lineLen > 75) {
+						break;
+					}
+					else {
+						last++;
+					}
+				}
+				// 두번째 숫자 부분 존재하는 단어인지 확인
+				if (last - first < prevIndex) {
+					throw string("존재하지 않는 위치입니다. 다시 입력해주세요.");
+				}
+				vec.insert(vec.begin() + i + prevIndex , target);
+				printPage(vec);
+				return;
+			}
+			len = len + 1 + vec[i].size();
+
+			if (len > 75) {
+
+				len = 4;
+				index++;
+
+				if (index > 21) {
+					break;
+				}
+
+				i--;
+			}
+		}
 	}
 };
 
@@ -71,31 +201,81 @@ class DeleteText : public TextStrategy {
 	// d(2,10)
 	// 두 번째 라인의 열 번째 단어 삭제
 public:
-	void run(vector<string>& vec, int line, int deleteIndex) {
-		
+	virtual void run(vector<string>& vec, string cmdInput) {
+
+		// () 아니면
+		if (cmdInput[1] != '(' || cmdInput[cmdInput.length() - 1] != ')') {
+			throw string("괄호가 존재하지 않습니다. 다시 입력해주세요.");
+		}
+		//d과 ()제거
+		string substring = cmdInput.substr(2, cmdInput.length() - 3);
+		istringstream ss(substring);
+		string stringBuffer;
+		vector<string> x;
+		x.clear();
+		while (getline(ss, stringBuffer, ',')) {	// , 에 도달하기 전까지의 값이 stringBuffer에 저장.
+			x.push_back(stringBuffer);
+		}
+
+		// 인자 2개인지 확인
+		if (x.size() != 2) {
+			throw string("인자의 개수가 잘못됐습니다. 다시 입력해주세요.");
+		}
+
+		// 숫자 숫자인지 확인
+		if (!atoi(x[0].c_str()) || !atoi(x[1].c_str())) {
+			throw string("숫자 숫자 문자여야합니다. 다시 입력해주세요.");
+		}
+
+		// 처음 숫자 부분 1~20인지 확인
+		if (stoi(x[0]) < 1 || stoi(x[0]) > 20) {
+			throw string("첫 번째 인자는 1~20 사이의 값만 입력할 수 있습니다.");
+		}
+
+
+		int line = stoi(x[0]);
+		int deleteIndex = stoi(x[1]);
+
 		int len = 3;
-		int index = 1;	
-		
+		int index = 1;
+
 		for (int i = 0; i < vec.size(); i++) {
 			if (index == line) {	// 해당 라인이면
-				vec.erase(vec.begin()+i+deleteIndex-1);
+				int first = i;
+				int last = i;
+				int lineLen = 3;
+				for (int j = i; j < vec.size(); j++) {
+					lineLen += 1 + vec[j].size();
+					if (lineLen > 75) {
+						break;
+					}
+					else {
+						last++;
+					}
+				}
+				// 두번째 숫자 부분 존재하는 단어인지 확인
+				if (last - first < deleteIndex) {
+					throw string("존재하지 않는 위치입니다. 다시 입력해주세요.");
+				}
+				vec.erase(vec.begin() + i + deleteIndex - 1);
+				printPage(vec);
 				return;
 			}
 			len = len + 1 + vec[i].size();
-			
-			if(len > 76) {
+
+			if (len > 75) {
 
 				len = 3;
 				index++;
-				
+
 				if (index > 21) {
 					break;
 				}
-				
+
 				i--;
 			}
 		}
-
+		
 	}
 
 };
@@ -103,15 +283,47 @@ public:
 class ChangeText : public TextStrategy {
 	// c(hello, bye)
 	// txt 파일에서 모든 hello를 bye로 변경
-	void run(vector<string>& vec, string target, string changeData) {
+	virtual void run(vector<string>& vec, string cmdInput) {
+
+		// () 아니면
+		if (cmdInput[1] != '(' || cmdInput[cmdInput.length() - 1] != ')') {
+			throw string("괄호가 존재하지 않습니다. 다시 입력해주세요.");
+		}
+		//c와 ()제거
+		string substring = cmdInput.substr(2, cmdInput.length() - 3);
+		istringstream ss(substring);
+		string stringBuffer;
+		vector<string> x;
+		x.clear();
+		while (getline(ss, stringBuffer, ',')) {	// , 에 도달하기 전까지의 값이 stringBuffer에 저장.
+			x.push_back(stringBuffer);
+		}
+
+		// 인자 2개인지 확인
+		if (x.size() != 2) {
+			throw string("인자의 개수가 잘못됐습니다. 다시 입력해주세요.");
+		}
+
+		// 2번째 인자 75바이트 넘는지 확인
+		if (x[1].length() > 75) {
+			throw string("문자열 길이가 75바이트를 넘었습니다. 다시 입력해주세요.");
+		}
+
+		string target = x[0];
+		string changeData = x[1];
+
+		bool check = false;
 		for (int i = 0; i < vec.size(); i++)
 		{
 			if (vec[i] == target) {
 				vec[i] = changeData;
+				check = true;
 			}
-			
-
 		}
+		if (check == false) {
+			throw string("변경하고싶은 단어가 현재 txt에 존재하지 않습니다.");
+		}
+		printPage(vec);
 	}
 };
 
@@ -122,7 +334,35 @@ class SearchText : public TextStrategy {
 public:
 	//벡터에서 target 찾기 전까지 계속 삭제.
 	//target 찾으면 for문 끝내기.
-	void run(vector<string>& vec, string target) {
+	virtual void run(vector<string>& vec, string cmdInput) {
+
+		// () 아니면
+		if (cmdInput[1] != '(' || cmdInput[cmdInput.length() - 1] != ')') {
+			throw string("괄호가 존재하지 않습니다. 다시 입력해주세요.");
+		}
+		//s와 ()제거
+		string substring = cmdInput.substr(2, cmdInput.length() - 3);
+
+		// 인자 75바이트 넘는지 확인
+		if (substring.length() > 75) {
+			throw string("문자열 길이가 75바이트를 넘었습니다. 다시 입력해주세요.");
+		}
+
+		string target = substring;
+		bool check = false;
+
+		for (int i = 0; i < vec.size(); i++)
+		{
+			if (vec[i] == target) {
+				check = true;
+				break;
+			}
+		}
+
+		if (check == false) {
+			throw string("찾는 단어가 존재하지 않습니다.");
+		}
+
 		for (int i = 0; i < vec.size(); i++)
 		{
 			if (vec[0] == target) {
@@ -131,105 +371,60 @@ public:
 			else {
 				vec.erase(vec.begin());
 			}
-			
+		}
+
+		printPage(vec);
+	}
+
+};
+
+// t입력-> 저장(종료는 메인에서)
+class StoreText : public TextStrategy {	
+public:
+	virtual void run(vector<string>& vec, string cmdInput) {
+		out.open("test2.txt");
+
+		string content = "";
+
+		for (int i = 0; i < vec.size(); i++) {
+			content += vec[i] + " ";
+		}
+
+		if (out.is_open()) {
+			out << content;
+			out.close();
+
+		}
+		else {
+			throw string("Can't find the file");
 		}
 	}
-
+private:
+	fstream out;
 };
 
-class StoreFile : public TextStrategy {
-	// 저장 후 종료
-public:
-	// 현재 벡터의 상태를 파일에 그대로 덮어쓰기.
-	void run(vector<string>& vec, string fileName) {
 
-	}
-};
 
 class EditMachine {
 public:
-	EditMachine(TextStrategy *text) {
-		textStrategy = text;
+	EditMachine(TextStrategy* strategy) {
+		textStrategy = strategy;
 	}
-	virtual void run() {
-
+	virtual void run(vector<string>&vec, string cmdInput) {
+		textStrategy->run(vec, cmdInput);
 	}
-	void run(vector<string>& vec, int pageNum) {	// NextText, PrevText
-
+	void setTextStrategy(TextStrategy* strategy) {
+		textStrategy = strategy;
 	}
-	void setTextStrategy(TextStrategy* text) {
-		textStrategy = text;
-	}
+	
 protected:
 	TextStrategy* textStrategy;
 };
 
-
-
-void printLine() {
-	for (int i = 0; i < 75; i++) {
-		cout << "-";
-	}
-}
-
-
-void print(vector<string>& vec, string message) {
-	//wcout.imbue(locale("kor"));
-	/*20줄 출력*/
-	int vecLast = 0;
-	int vecPrev = 0;
-	int point = 3;
-	int index = 1;	// line
-
-	cout << " " << index << "|";
-
-	// 벡터 출력해보기
-	for (int i = 0; i < vec.size(); i++) {
-		point = point + 1 + vec[i].size();
-		if (point <= 75) {
-
-			cout << " " << vec[i];
-
-		}
-		else {
-
-			point = 3;
-			index++;
-			cout << "\n";
-			if (index < 21) {
-				if (index < 10) {
-					cout << " " << index << "|";
-				}
-				else {
-					cout << index << "|";
-				}
-			}
-			else {
-				vecLast = i - 1;
-				break;
-			}
-			i--;
-		}
-	}
-
-
-	/*작업 메뉴*/
-	printLine();
-	cout << "\n" << "n:다음페이지, p:이전페이지, i:삽입, d:삭제, c:변경, s:찾기, t:저장후종료" << endl;
-	printLine();
-	cout << "\n" << message << endl;
-	printLine();
-
-}
-
-
-
 int main() {
-
-	//locale::global(locale("ko_KR.UTF-8"));
 	static vector<string> vec;
 	string input, output;	// input에 txt 내용 다 저장
-	int page = 1;
+	
 	string st;
 
 	ifstream in("test2.txt");
@@ -248,44 +443,119 @@ int main() {
 		cout << "Can't find the file" << endl;
 	}
 
+	TextStrategy* printStrategy = new StartPrint;
+	TextStrategy* nextStrategy = new NextPage;
+	TextStrategy* prevStrategy = new PrevPage;
+	TextStrategy* insertStrategy = new InsertText;
+	TextStrategy* deleteStrategy = new DeleteText;
+	TextStrategy* changeStrategy = new ChangeText;
+	TextStrategy* searchStrategy = new SearchText;
+	TextStrategy* storeStrategy = new StoreText;
+
+	EditMachine* editor = new EditMachine(printStrategy);
+
+	editor->run(vec, "helloWorld"); // cmd값은 아무거나 넣어주기
 	
+	cout << "---------------------------------------------------------------------------" << endl;
+	cout << "n:다음페이지, p:이전페이지, i:삽입, d:삭제, c:변경, s:찾기, t:저장후종료\n";
+	cout << "---------------------------------------------------------------------------" << endl;
+	cout << "(콘솔메시지) 201902736 이채림의 편집기입니다." << endl;
+
+
 	
-	string message = "no error";
 	while (true) {
-		char choose[100] = "\0";
-		print(vec, message);
-		cout << "\n입력: ";
-		cin >> choose;
-		printLine();
+		string message = "정상적으로 작동되었습니다.";
+		string cmdInput = "";
+		cout << "---------------------------------------------------------------------------" << endl;
+		cout << "입력: ";
 
-		if(*choose == 't'){
-			break;
-		}
-		else if (*choose == 'n') {
-			cout << "\n난 n이야" << endl;
-			break;
-		}
-		else if (*choose == 'p') {
-
-		}
-		 else if (choose[0] == 'i') {
-			cout << "\n난 i이야" << endl;
-			break;
-		 }
-		 else if (choose[0] == 'd') {
-
-		}
-		 else if (choose[0] == 'c') {
-
-		}
-		 else if (choose[0] == 's') {
-
-		}
-		 
+		getline(cin, cmdInput);
 		
 
+		if (cmdInput[0] == 't') {
+			try {
+				editor->setTextStrategy(storeStrategy);
+				editor->run(vec, cmdInput);
+				cout << "---------------------------------------------------------------------------" << endl;
+				cout << "(콘솔메시지)" << "저장되었습니다. 편집기를 종료합니다." << endl;
+			}
+			catch (string s) {
+				message = s; 
+				cout << "---------------------------------------------------------------------------" << endl;
+				cout << "(콘솔메시지)" << s << endl;
+
+			}
+			break;
+		}
+		else if (cmdInput[0] == 'n') {
+			try {
+				editor->setTextStrategy(nextStrategy);
+				editor->run(vec, cmdInput);
+			}
+			catch (string s) {
+				message = s;
+			}
+		}
+		else if (cmdInput[0] == 'p') {
+			try {
+				editor->setTextStrategy(prevStrategy);
+				editor->run(vec, cmdInput);
+			}
+			catch (string s) {
+				message = s;
+			}
+			
+		}
+		else if (cmdInput[0] == 'i') {
+			try {
+				editor->setTextStrategy(insertStrategy);
+				editor->run(vec, cmdInput);
+			}
+			catch (string s) {
+				message = s;
+			}
+		}
+		else if (cmdInput[0] == 'd') {
+			try {
+				editor->setTextStrategy(deleteStrategy);
+				editor->run(vec, cmdInput);
+			}
+			catch (string s) {
+				message = s;
+			}
+		}
+		else if (cmdInput[0] == 'c') {
+			try {
+				editor->setTextStrategy(changeStrategy);
+				editor->run(vec, cmdInput);
+			}
+			catch (string s) {
+				message = s;
+			}
+		}
+		else if (cmdInput[0] == 's') {
+			try {
+				editor->setTextStrategy(searchStrategy);
+				editor->run(vec, cmdInput);
+			}
+			catch (string s) {
+				message = s;
+			}
+		}
+		else { // 없는 명령어
+			message = "존재하지 않는 명령어 입니다.";
+		}
+
+		cout << "---------------------------------------------------------------------------" << endl;
+		cout << "(콘솔메시지)" << message << endl;
+		cout << "---------------------------------------------------------------------------" << endl;
+		cout << "n:다음페이지, p:이전페이지, i:삽입, d:삭제, c:변경, s:찾기, t:저장후종료" << endl;
+		
+
+
+
 	}
-	
+
 
 	in.close();
 
@@ -293,25 +563,6 @@ int main() {
 	getchar();
 
 	return 0;
-
-	/*
-	int line_count = 1;
-    system("cls");
-    string line = "";
-    for (int i = 0; i < data.size(); i++)
-    {
-      line += data[i] + " ";
-      if (line.size() + data[i].size() > 75) {
-        if (page_count * 20 < line_count && line_count <= (page_count + 1) * 20)
-        {
-          cout << setw(2) << line_count << "| " << line << "\n";
-        }
-        line_count++;
-        line = "";
-      }
-    }
-	*/
-
 
 
 
